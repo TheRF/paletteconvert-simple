@@ -36,7 +36,7 @@ class PaletteError(Exception):
 
 class Palette:
     '''our base palette class
-    functions:
+    methods:
             gimp_to_jasc = converts a gimp palette into jasc format
             jasc_to_gimp = converts a jasc palette into gimp format
             convert_palette = wrapper for above methods
