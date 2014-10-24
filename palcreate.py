@@ -7,7 +7,7 @@ DEBUG = True
 
 #------------------
 
-def debug(string, inte):
+def debug(string, inte=0):
     '''debuging function
     arguments:
             string = message that should be displayed
@@ -189,9 +189,22 @@ def get_palette_colors_rgb(amount, initcolor):
 #--------------------------
     
 '''hue ranges'''
-RED = [355, 10]
-YELLOW = [51, 60]
-BLUE = [221, 240]
+HUERANGE = [356, 11, # red (0)
+            11, 21, # red-orange (1)
+            21, 41, # orange-brown (2)
+            41, 51, # orange-yellow (3)
+            51, 61, # yellow (4)
+            61, 81, # yellow-green (5)
+            81, 141, # green (6)
+            141, 170, # green-cyan (7)
+            170, 201, # cyan (8)
+            201, 221, # cyan-blue (9)
+            221, 241, # blue (10)
+            241, 281, # blue-magenta (11)
+            281, 321, # magenta (12)
+            321, 331, # magenta-pink (13)
+            331, 346, # pink (14)
+            346, 356] # pink-red (15)
 # FIXME hue ranges for in-between colors
 def get_palette_colors_hls(amount, initcolor):
     '''create color ramps in HLS
@@ -206,30 +219,67 @@ def get_palette_colors_hls(amount, initcolor):
     colors = [(0,0,0)]
     
     # determine the starting color area depending on the hue
-    # 0 = red, 1 = yellow-red, 2 = yellow, 3 = yellow-blue, 4 = blue, 5 = blue-red
     starthue = 0
-    if h <= RED[1] or h >= RED[0]:
+    loop = True
+    if h >= HUERANGE[0] or h <= HUERANGE[1]:
         starthue = 0
-    elif h > RED[1] and h < YELLOW[0]:
-        starthue = 1
-    elif h >= YELLOW[0] and h <= YELLOW[1]:
-        starthue = 2
-    elif h > YELLOW[1] and h < BLUE[0]:
-        starthue = 3
-    elif h >= BLUE[0] and h <= BLUE[1]:
-        starthue = 4
-    else:
-        starthue = 5
+        loop = False
+
+    if loop:    
+        for i in range(2, len(HUERANGE), 2):
+            if h >= HUERANGE[i] and h <= HUERANGE[i+1]:
+                starthue = i//2
+                break
+                
+    if starthue == 0 and loop == True:
+        debug('starthue could not be retrieved correctly')
+        exit(1)
     debug('starthue:', starthue)
         
-    # we want darker colors, so determine difference between init hue and blue
-    mb = (BLUE[0] + BLUE[1])//2
-    diff = abs(h-mb)
+    # we want darker colors, so determine difference between init hue and blue,
+    # while also avoiding yellow, which is the brightest one
+    mb = (HUERANGE[20] + HUERANGE[21])//2
+    right = 0 # 0 - below yellow, 1 - above yellow
+    if starthue < 4 or starthue == 4 and h <= (HUERANGE[8]+HUERANGE[9])//2:
+        side = 0
+    else:
+        side = 1
+    debug('side:', side)
+        
     debug('mb:', mb)
-    debug('difference:', diff)
     
-    steps = round(diff/amount)
-    if h > mb:
+    # which color is our target point?
+    nextrange = 0
+    if starthue == 0 and not side: # red underflow
+        nextrange = len(HUERANGE)//2 - 2
+    if starthue == 1 and not side:
+        nextrange = len(HUERANGE)//2 - 1
+    elif starthue == 10 or starthue == 9 or starthue == 11: # startpoint is blue
+        nextrange = starthue
+    elif starthue > 11: # we already passed blue, so we want the previous section
+        nextrange = starthue - 2
+    elif starthue >= 4 and side: # we passed the middle of yellow
+        nextrange = starthue + 2
+    else:
+        nextrange = starthue - 2
+        
+    debug('nextrange', nextrange)
+
+    nextmidd = 0
+    if nextrange == 0:
+        nextmidd = ((HUERANGE[0] + HUERANGE[1]+360)//2) - 360
+    else:
+        nextmidd = (HUERANGE[(nextrange)*2] + HUERANGE[(nextrange)*2 + 1]) // 2
+
+    debug('nextmidd:', nextmidd)
+
+    if nextrange > starthue + 2:
+        diff = h + (360-nextmidd)
+    else:
+        diff = abs(h-nextmidd)
+        
+    steps = diff/amount
+    if h > mb or not side:
         steps *= -1
     debug('steps:', steps)
     
